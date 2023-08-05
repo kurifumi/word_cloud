@@ -25,7 +25,10 @@ cd mecab-ipadic-neologd
 ./bin/install-mecab-ipadic-neologd -n
 ```
 
-# 起動方法
+# 使い方
+- `data` フォルダに演算対象とするCSVファイルを格納後、後述するコマンドを叩いて使用します
+- 演算した結果は `output` フォルダに出力されます
+
 ## 実行コマンド
 ```sh
 $ python3 main.py [options]
