@@ -1,11 +1,11 @@
 import csv
 import re
-import sys
 import argparse
 import MeCab
 import unicodedata
 import wordcloud as wc
 import matplotlib.pyplot as plt
+from multiprocess import Pool
 
 WORDCLOUD_FONT_PATH = "/Library/Fonts/Arial Unicode.ttf"
 THRESHOLD_COUNT = 20
@@ -53,10 +53,12 @@ def tokenize_text(s: str) -> [str]:
     return r
 
 def tokenize_texts(strs: [str]) -> [str]:
-    results = []
-    for s in strs:
-        results.extend(tokenize_text(s))
-    return results
+    result = []
+    with Pool(8) as pool:
+        data = pool.map(tokenize_text, strs)
+        for row in data: result.extend(row)
+    return result
+
 
 def convert_word_dict(words: [str]) -> object:
     w_dict = {}
