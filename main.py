@@ -10,6 +10,10 @@ import matplotlib.pyplot as plt
 WORDCLOUD_FONT_PATH = "/Library/Fonts/Arial Unicode.ttf"
 THRESHOLD_COUNT = 20
 
+# Mecab
+mecab = MeCab.Tagger('-d /usr/local/lib/mecab/dic/mecab-ipadic-neologd')
+mecab.parse('')
+
 def read_csv(file_name: str, target_column: str = 'name') -> [str]:
     base_path = 'data/'
     with open(f'{base_path}{file_name}.csv', 'r') as f: #comma-separated
@@ -18,40 +22,40 @@ def read_csv(file_name: str, target_column: str = 'name') -> [str]:
         for row in reader: data.append(row[target_column])
     return data
 
-def hoge(strs: [str]) -> [str]:
-    mecab = MeCab.Tagger('-d /usr/local/lib/mecab/dic/mecab-ipadic-neologd')
-    mecab.parse('')
+def tokenize_text(s: str) -> [str]:
+    ########################
+    # テキスト前処理
+    ########################
+    # 表記揺れの吸収
+    s = s.lower()
+    s = unicodedata.normalize('NFKC', s)
+    # 7桁以上数値が連続する場合は案件番号などの特徴の低い情報の可能性が高いので削除
+    s = re.sub(r'[0-9]{7,}', '', s)
+    # カンマ入りの数値対策
+    s = re.sub(r'[,]', '', s)
+    s = s.strip()
+    node = mecab.parseToNode(s)
+
+    r = []
+    while node:
+        # 単語を取得
+        if node.feature.split(",")[6] == '*':
+            word = node.surface
+        else:
+            word = node.feature.split(",")[6]
+
+        # 品詞を取得
+        part = node.feature.split(",")[0]
+
+        if part in ["名詞", "動詞"]:
+            r.append(word)
+        node = node.next
+    return r
+
+def tokenize_texts(strs: [str]) -> [str]:
     results = []
     for s in strs:
-        r = []
-
-        ########################
-        # テキスト前処理
-        ########################
-        # 表記揺れの吸収
-        s = s.lower()
-        s = unicodedata.normalize('NFKC', s)
-        # 7桁以上数値が連続する場合は案件番号などの特徴の低い情報の可能性が高いので削除
-        s = re.sub(r'[0-9]{7,}', '', s)
-        # カンマ入りの数値対策
-        s = re.sub(r'[,]', '', s)
-        s = s.strip()
-        # Mecab
-        node = mecab.parseToNode(s)
-        while node:
-            # 単語を取得
-            if node.feature.split(",")[6] == '*':
-                word = node.surface
-            else:
-                word = node.feature.split(",")[6]
-
-            # 品詞を取得
-            part = node.feature.split(",")[0]
-
-            if part in ["名詞", "動詞"]:
-                r.append(word)
-            node = node.next
-        results.extend(r)
+        results.extend(tokenize_text(s))
     return results
 
 def convert_word_dict(words: [str]) -> object:
@@ -123,8 +127,8 @@ if __name__ == '__main__':
     file_output_name = args.output
 
     print('データ解析処理')
-    w_dict1 = convert_word_dict(hoge(read_csv(file_base_name, args.column_name)))
-    w_dict2 = convert_word_dict(hoge(read_csv(file_compare_name, args.column_name)))
+    w_dict1 = convert_word_dict(tokenize_texts(read_csv(file_base_name, args.column_name)))
+    w_dict2 = convert_word_dict(tokenize_texts(read_csv(file_compare_name, args.column_name)))
     f_dict = make_flags(w_dict1, w_dict2)
 
     print('WordCloud描画処理')
